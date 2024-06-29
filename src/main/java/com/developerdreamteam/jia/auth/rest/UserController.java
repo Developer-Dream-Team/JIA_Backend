@@ -1,7 +1,7 @@
 package com.developerdreamteam.jia.auth.rest;
 
 import com.developerdreamteam.jia.auth.model.dto.UserDTO;
-import com.developerdreamteam.jia.auth.model.entity.User;
+import com.developerdreamteam.jia.auth.model.dto.UserResponseDTO;
 import com.developerdreamteam.jia.auth.response.ServiceResponse;
 import com.developerdreamteam.jia.auth.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,8 +19,8 @@ public class UserController {
     private UserService userService;
 
     @PostMapping("/signup")
-    public ResponseEntity<ServiceResponse<User>> signup(@RequestBody UserDTO userDTO) {
-        ServiceResponse<User> response = userService.saveUser(userDTO);
+    public ResponseEntity<ServiceResponse<UserResponseDTO>> signup(@RequestBody UserDTO userDTO) {
+        ServiceResponse<UserResponseDTO> response = userService.saveUser(userDTO);
         return new ResponseEntity<>(response, response.getStatus());
     }
 }

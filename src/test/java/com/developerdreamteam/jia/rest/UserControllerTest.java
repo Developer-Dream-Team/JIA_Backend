@@ -1,7 +1,7 @@
 package com.developerdreamteam.jia.rest;
 
 import com.developerdreamteam.jia.auth.model.dto.UserDTO;
-import com.developerdreamteam.jia.auth.model.entity.User;
+import com.developerdreamteam.jia.auth.model.dto.UserResponseDTO;
 import com.developerdreamteam.jia.auth.response.ServiceResponse;
 import com.developerdreamteam.jia.auth.rest.UserController;
 import com.developerdreamteam.jia.auth.service.UserService;
@@ -45,15 +45,14 @@ public class UserControllerTest {
         userDTO.setLastName("Smith");
         userDTO.setPassword("password123");
 
-        User user = new User();
-        user.setId("1");
-        user.setEmail("test@example.com");
-        user.setFirstName("Alice");
-        user.setLastName("Smith");
-        user.setPassword("password123");
-        user.setTimestamp("2024-01-01 12:00:00");
+        UserResponseDTO userResponseDTO = new UserResponseDTO();
+        userResponseDTO.setId("1");
+        userResponseDTO.setEmail("test@example.com");
+        userResponseDTO.setFirstName("Alice");
+        userResponseDTO.setLastName("Smith");
+        userResponseDTO.setTimestamp("2024-01-01 12:00:00");
 
-        ServiceResponse<User> serviceResponse = new ServiceResponse<>(HttpStatus.CREATED, "User created successfully", user);
+        ServiceResponse<UserResponseDTO> serviceResponse = new ServiceResponse<>(HttpStatus.CREATED, "User created successfully", userResponseDTO);
 
         when(userService.saveUser(userDTO)).thenReturn(serviceResponse);
 
@@ -62,7 +61,8 @@ public class UserControllerTest {
                         .content("{\"email\": \"test@example.com\", \"lastName\": \"Smith\", \"firstName\": \"Alice\", \"password\": \"password123\"}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.message", is("User created successfully")))
-                .andExpect(jsonPath("$.data.email", is("test@example.com")));
+                .andExpect(jsonPath("$.data.email", is("test@example.com")))
+                .andExpect(jsonPath("$.data.password").doesNotExist()); // Ensure password is not present
     }
 
     @Test
@@ -73,7 +73,7 @@ public class UserControllerTest {
         userDTO.setLastName("Smith");
         userDTO.setPassword("password123");
 
-        ServiceResponse<User> serviceResponse = new ServiceResponse<>(HttpStatus.BAD_REQUEST, "Email is already in use", null);
+        ServiceResponse<UserResponseDTO> serviceResponse = new ServiceResponse<>(HttpStatus.BAD_REQUEST, "Email is already in use", null);
 
         when(userService.saveUser(userDTO)).thenReturn(serviceResponse);
 
