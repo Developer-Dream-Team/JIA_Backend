@@ -20,7 +20,6 @@ public class UserService {
     private UserRepository userRepository;
 
 
-
     @Transactional
     public ServiceResponse<UserResponseDTO> saveUser(UserDTO userDTO) {
         if (userRepository.existsByEmail(userDTO.getEmail())) {
@@ -32,6 +31,7 @@ public class UserService {
         user.setLastName(userDTO.getLastName());
         user.setFirstName(userDTO.getFirstName());
         user.setPassword(userDTO.getPassword());
+        user.setActive(false);
         user.setTimestamp(TimestampUtil.getCurrentTimestamp());
 
         User savedUser = userRepository.save(user);
@@ -41,6 +41,7 @@ public class UserService {
                 savedUser.getEmail(),
                 savedUser.getFirstName(),
                 savedUser.getLastName(),
+                savedUser.isActive(),
                 savedUser.getTimestamp()
         );
 

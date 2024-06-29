@@ -8,9 +8,11 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class UserResponseDTO {
+
     private String id;
     private String email;
     private String firstName;
     private String lastName;
+    private boolean active;
     private String timestamp;
 }
