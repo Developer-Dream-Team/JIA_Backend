@@ -1,7 +1,7 @@
 package com.developerdreamteam.jia.auth.service;
 
-
 import com.developerdreamteam.jia.auth.model.dto.UserDTO;
+import com.developerdreamteam.jia.auth.model.dto.UserResponseDTO;
 import com.developerdreamteam.jia.auth.model.entity.User;
 import com.developerdreamteam.jia.auth.repository.UserRepository;
 import com.developerdreamteam.jia.auth.response.ServiceResponse;
@@ -17,10 +17,11 @@ import java.util.Optional;
 public class UserService {
 
     @Autowired
-    UserRepository userRepository;
+    private UserRepository userRepository;
+
 
     @Transactional
-    public ServiceResponse<User> saveUser(UserDTO userDTO) {
+    public ServiceResponse<UserResponseDTO> saveUser(UserDTO userDTO) {
         if (userRepository.existsByEmail(userDTO.getEmail())) {
             return new ServiceResponse<>(HttpStatus.BAD_REQUEST, "Email is already in use", null);
         }
@@ -30,10 +31,21 @@ public class UserService {
         user.setLastName(userDTO.getLastName());
         user.setFirstName(userDTO.getFirstName());
         user.setPassword(userDTO.getPassword());
+        user.setActive(false);
         user.setTimestamp(TimestampUtil.getCurrentTimestamp());
 
         User savedUser = userRepository.save(user);
-        return new ServiceResponse<>(HttpStatus.CREATED, "User created successfully", savedUser);
+
+        UserResponseDTO userResponseDTO = new UserResponseDTO(
+                savedUser.getId(),
+                savedUser.getEmail(),
+                savedUser.getFirstName(),
+                savedUser.getLastName(),
+                savedUser.isActive(),
+                savedUser.getTimestamp()
+        );
+
+        return new ServiceResponse<>(HttpStatus.CREATED, "User created successfully", userResponseDTO);
     }
 
     public Optional<User> findUserByEmail(String email) {

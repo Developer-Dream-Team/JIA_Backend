@@ -1,7 +1,7 @@
 package com.developerdreamteam.jia.service;
 
-
 import com.developerdreamteam.jia.auth.model.dto.UserDTO;
+import com.developerdreamteam.jia.auth.model.dto.UserResponseDTO;
 import com.developerdreamteam.jia.auth.model.entity.User;
 import com.developerdreamteam.jia.auth.repository.UserRepository;
 import com.developerdreamteam.jia.auth.response.ServiceResponse;
@@ -48,11 +48,15 @@ public class UserServiceTest {
             return user;
         });
 
-        ServiceResponse<User> response = userService.saveUser(userDTO);
+        ServiceResponse<UserResponseDTO> response = userService.saveUser(userDTO);
 
         assertEquals(HttpStatus.CREATED, response.getStatus());
         assertNotNull(response.getData());
         assertEquals("User created successfully", response.getMessage());
+        assertEquals("test@example.com", response.getData().getEmail());
+        assertEquals("Jones", response.getData().getFirstName());
+        assertEquals("James", response.getData().getLastName());
+        assertNotNull(response.getData().getTimestamp());
     }
 
     @Test
@@ -65,7 +69,7 @@ public class UserServiceTest {
 
         when(userRepository.existsByEmail(userDTO.getEmail())).thenReturn(true);
 
-        ServiceResponse<User> response = userService.saveUser(userDTO);
+        ServiceResponse<UserResponseDTO> response = userService.saveUser(userDTO);
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatus());
         assertNull(response.getData());
