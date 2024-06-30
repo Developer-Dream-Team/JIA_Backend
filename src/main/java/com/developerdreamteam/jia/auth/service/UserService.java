@@ -5,13 +5,18 @@ import com.developerdreamteam.jia.auth.model.dto.UserResponseDTO;
 import com.developerdreamteam.jia.auth.model.entity.User;
 import com.developerdreamteam.jia.auth.repository.UserRepository;
 import com.developerdreamteam.jia.auth.response.ServiceResponse;
-import com.developerdreamteam.jia.auth.util.TimestampUtil;
+import com.developerdreamteam.jia.util.EmailContentGenerator;
+import com.developerdreamteam.jia.util.TimestampUtil;
+import com.developerdreamteam.jia.commons.EmailServiceImpl;
+import com.developerdreamteam.jia.constants.MessageConstants;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 public class UserService {
@@ -19,11 +24,16 @@ public class UserService {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private EmailServiceImpl emailService;
+
+    @Value("${app.base.url}")
+    private String baseUrl;
 
     @Transactional
     public ServiceResponse<UserResponseDTO> saveUser(UserDTO userDTO) {
         if (userRepository.existsByEmail(userDTO.getEmail())) {
-            return new ServiceResponse<>(HttpStatus.BAD_REQUEST, "Email is already in use", null);
+            return new ServiceResponse<>(HttpStatus.BAD_REQUEST, MessageConstants.EMAIL_IN_USE_MESSAGE, null);
         }
 
         User user = new User();
@@ -33,22 +43,26 @@ public class UserService {
         user.setPassword(userDTO.getPassword());
         user.setActive(false);
         user.setTimestamp(TimestampUtil.getCurrentTimestamp());
+        user.setActivationCode(UUID.randomUUID().toString());
 
         User savedUser = userRepository.save(user);
 
-        UserResponseDTO userResponseDTO = new UserResponseDTO(
-                savedUser.getId(),
-                savedUser.getEmail(),
-                savedUser.getFirstName(),
-                savedUser.getLastName(),
-                savedUser.isActive(),
-                savedUser.getTimestamp()
-        );
+        String activationLink = baseUrl + "/api/v1/users/signup/confirmation?success=" + user.getActivationCode();
 
-        return new ServiceResponse<>(HttpStatus.CREATED, "User created successfully", userResponseDTO);
+        String emailContent = EmailContentGenerator.generateActivationEmailContent(activationLink);
+
+        try {
+            emailService.sendSimpleMessage(savedUser.getEmail(), "Account Activation", emailContent);
+        } catch (Exception e) {
+            return new ServiceResponse<>(HttpStatus.INTERNAL_SERVER_ERROR, MessageConstants.EMAIL_SENDING_FAILED_MESSAGE, null);
+        }
+
+        UserResponseDTO userResponseDTO = new UserResponseDTO(savedUser.getId(), savedUser.getEmail(), savedUser.getFirstName(), savedUser.getLastName(), savedUser.isActive(), savedUser.getTimestamp());
+
+        return new ServiceResponse<>(HttpStatus.CREATED, MessageConstants.USER_CREATION_SUCCESS_MESSAGE, userResponseDTO);
     }
 
     public Optional<User> findUserByEmail(String email) {
-        return userRepository.findById(email);
+        return userRepository.findByEmail(email);
     }
 }

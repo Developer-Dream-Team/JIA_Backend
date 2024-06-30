@@ -6,24 +6,31 @@ import com.developerdreamteam.jia.auth.model.entity.User;
 import com.developerdreamteam.jia.auth.repository.UserRepository;
 import com.developerdreamteam.jia.auth.response.ServiceResponse;
 import com.developerdreamteam.jia.auth.service.UserService;
-import com.developerdreamteam.jia.auth.util.TimestampUtil;
+import com.developerdreamteam.jia.util.TimestampUtil;
+import com.developerdreamteam.jia.commons.EmailServiceImpl;
+import com.developerdreamteam.jia.constants.MessageConstants;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.http.HttpStatus;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
 public class UserServiceTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private EmailServiceImpl emailService;
 
     @InjectMocks
     private UserService userService;
@@ -31,12 +38,13 @@ public class UserServiceTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        ReflectionTestUtils.setField(userService, "baseUrl", "http://localhost:8080");
     }
 
     @Test
-    void testSaveUser_Success() {
+    void testSaveUser_Success() throws Exception {
         UserDTO userDTO = new UserDTO();
-        userDTO.setEmail("test@example.com");
+        userDTO.setEmail("helper@example.com");
         userDTO.setFirstName("Jones");
         userDTO.setLastName("James");
         userDTO.setPassword("password123");
@@ -45,24 +53,32 @@ public class UserServiceTest {
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
             User user = invocation.getArgument(0);
             user.setId("1");
+            user.setActivationCode(UUID.randomUUID().toString());
             return user;
         });
+
+        doNothing().when(emailService).sendSimpleMessage(
+                eq("helper@example.com"),
+                eq("Account Activation"),
+                contains("http://localhost:8080/api/v1/users/signup/confirmation?success=")
+        );
 
         ServiceResponse<UserResponseDTO> response = userService.saveUser(userDTO);
 
         assertEquals(HttpStatus.CREATED, response.getStatus());
         assertNotNull(response.getData());
-        assertEquals("User created successfully", response.getMessage());
-        assertEquals("test@example.com", response.getData().getEmail());
+        assertEquals(MessageConstants.USER_CREATION_SUCCESS_MESSAGE, response.getMessage());
+        assertEquals("helper@example.com", response.getData().getEmail());
         assertEquals("Jones", response.getData().getFirstName());
         assertEquals("James", response.getData().getLastName());
         assertNotNull(response.getData().getTimestamp());
+        assertNotNull(response.getData().getId());
     }
 
     @Test
     void testSaveUser_EmailAlreadyInUse() {
         UserDTO userDTO = new UserDTO();
-        userDTO.setEmail("test@example.com");
+        userDTO.setEmail("helper@example.com");
         userDTO.setFirstName("Jones");
         userDTO.setLastName("James");
         userDTO.setPassword("password123");
@@ -73,22 +89,51 @@ public class UserServiceTest {
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatus());
         assertNull(response.getData());
-        assertEquals("Email is already in use", response.getMessage());
+        assertEquals(MessageConstants.EMAIL_IN_USE_MESSAGE, response.getMessage());
+    }
+
+    @Test
+    void testSaveUser_EmailSendingFails() throws Exception {
+        UserDTO userDTO = new UserDTO();
+        userDTO.setEmail("helper@example.com");
+        userDTO.setFirstName("Jones");
+        userDTO.setLastName("James");
+        userDTO.setPassword("password123");
+
+        when(userRepository.existsByEmail(userDTO.getEmail())).thenReturn(false);
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
+            User user = invocation.getArgument(0);
+            user.setId("1");
+            user.setActivationCode(UUID.randomUUID().toString());
+            return user;
+        });
+
+        doThrow(new RuntimeException("Email sending failed")).when(emailService).sendSimpleMessage(
+                eq("helper@example.com"),
+                eq("Account Activation"),
+                contains("http://localhost:8080/api/v1/users/signup/confirmation?success=")
+        );
+
+        ServiceResponse<UserResponseDTO> response = userService.saveUser(userDTO);
+
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatus());
+        assertNull(response.getData());
+        assertEquals(MessageConstants.EMAIL_SENDING_FAILED_MESSAGE, response.getMessage());
     }
 
     @Test
     void testFindUserByEmail() {
         User user = new User();
         user.setId("1");
-        user.setEmail("test@example.com");
+        user.setEmail("helper@example.com");
         user.setFirstName("Brandon");
         user.setLastName("Phillipe");
         user.setPassword("password123");
         user.setTimestamp(TimestampUtil.getCurrentTimestamp());
 
-        when(userRepository.findById("test@example.com")).thenReturn(Optional.of(user));
+        when(userRepository.findByEmail("helper@example.com")).thenReturn(Optional.of(user));
 
-        Optional<User> foundUser = userService.findUserByEmail("test@example.com");
+        Optional<User> foundUser = userService.findUserByEmail("helper@example.com");
 
         assertTrue(foundUser.isPresent());
         assertEquals(user.getId(), foundUser.get().getId());

@@ -22,4 +22,6 @@ public class User {
     private String password;
     private boolean active;
     private String timestamp;
+    private String activationCode;
+
 }
