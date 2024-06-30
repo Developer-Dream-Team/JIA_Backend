@@ -1,14 +1,16 @@
 package com.developerdreamteam.jia.service;
 
+import com.developerdreamteam.jia.auth.exceptions.EmailSendingFailedException;
+import com.developerdreamteam.jia.auth.exceptions.UserAlreadyExistsException;
 import com.developerdreamteam.jia.auth.model.dto.UserDTO;
 import com.developerdreamteam.jia.auth.model.dto.UserResponseDTO;
 import com.developerdreamteam.jia.auth.model.entity.User;
 import com.developerdreamteam.jia.auth.repository.UserRepository;
 import com.developerdreamteam.jia.auth.response.ServiceResponse;
 import com.developerdreamteam.jia.auth.service.UserService;
-import com.developerdreamteam.jia.util.TimestampUtil;
 import com.developerdreamteam.jia.commons.EmailServiceImpl;
 import com.developerdreamteam.jia.constants.MessageConstants;
+import com.developerdreamteam.jia.util.TimestampUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -38,7 +40,7 @@ public class UserServiceTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        ReflectionTestUtils.setField(userService, "baseUrl", "http://localhost:8080");
+        ReflectionTestUtils.setField(userService, "baseUrl", "http://localhost:8080/");
     }
 
     @Test
@@ -85,11 +87,11 @@ public class UserServiceTest {
 
         when(userRepository.existsByEmail(userDTO.getEmail())).thenReturn(true);
 
-        ServiceResponse<UserResponseDTO> response = userService.saveUser(userDTO);
+        UserAlreadyExistsException exception = assertThrows(UserAlreadyExistsException.class, () -> {
+            userService.saveUser(userDTO);
+        });
 
-        assertEquals(HttpStatus.BAD_REQUEST, response.getStatus());
-        assertNull(response.getData());
-        assertEquals(MessageConstants.EMAIL_IN_USE_MESSAGE, response.getMessage());
+        assertEquals(MessageConstants.EMAIL_IN_USE_MESSAGE, exception.getMessage());
     }
 
     @Test
@@ -114,11 +116,11 @@ public class UserServiceTest {
                 contains("http://localhost:8080/api/v1/users/signup/confirmation?success=")
         );
 
-        ServiceResponse<UserResponseDTO> response = userService.saveUser(userDTO);
+        EmailSendingFailedException exception = assertThrows(EmailSendingFailedException.class, () -> {
+            userService.saveUser(userDTO);
+        });
 
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatus());
-        assertNull(response.getData());
-        assertEquals(MessageConstants.EMAIL_SENDING_FAILED_MESSAGE, response.getMessage());
+        assertEquals(MessageConstants.EMAIL_SENDING_FAILED_MESSAGE, exception.getMessage());
     }
 
     @Test
