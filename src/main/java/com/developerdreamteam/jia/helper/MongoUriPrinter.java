@@ -1,4 +1,4 @@
-package com.developerdreamteam.jia.auth.test;
+package com.developerdreamteam.jia.helper;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
+// IMPORTANT: REMOVE THIS CLASS BEFORE DEPLOYMENT
 @Component
 public class MongoUriPrinter implements CommandLineRunner {
 

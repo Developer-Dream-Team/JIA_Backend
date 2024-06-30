@@ -1,4 +1,4 @@
-package com.developerdreamteam.jia.auth.util;
+package com.developerdreamteam.jia.util;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;

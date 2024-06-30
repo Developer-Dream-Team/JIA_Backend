@@ -40,16 +40,17 @@ public class UserControllerTest {
     @Test
     void testSignup_Success() throws Exception {
         UserDTO userDTO = new UserDTO();
-        userDTO.setEmail("test@example.com");
+        userDTO.setEmail("helper@example.com");
         userDTO.setFirstName("Alice");
         userDTO.setLastName("Smith");
         userDTO.setPassword("password123");
 
         UserResponseDTO userResponseDTO = new UserResponseDTO();
         userResponseDTO.setId("1");
-        userResponseDTO.setEmail("test@example.com");
+        userResponseDTO.setEmail("helper@example.com");
         userResponseDTO.setFirstName("Alice");
         userResponseDTO.setLastName("Smith");
+        userResponseDTO.setActive(false);
         userResponseDTO.setTimestamp("2024-01-01 12:00:00");
 
         ServiceResponse<UserResponseDTO> serviceResponse = new ServiceResponse<>(HttpStatus.CREATED, "User created successfully", userResponseDTO);
@@ -58,17 +59,18 @@ public class UserControllerTest {
 
         mockMvc.perform(post("/api/v1/users/signup")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\": \"test@example.com\", \"lastName\": \"Smith\", \"firstName\": \"Alice\", \"password\": \"password123\"}"))
+                        .content("{\"email\": \"helper@example.com\", \"lastName\": \"Smith\", \"firstName\": \"Alice\", \"password\": \"password123\"}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.message", is("User created successfully")))
-                .andExpect(jsonPath("$.data.email", is("test@example.com")))
-                .andExpect(jsonPath("$.data.password").doesNotExist()); // Ensure password is not present
+                .andExpect(jsonPath("$.data.email", is("helper@example.com")))
+                .andExpect(jsonPath("$.data.active", is(false)))
+                .andExpect(jsonPath("$.data.password").doesNotExist());
     }
 
     @Test
     void testSignup_EmailAlreadyInUse() throws Exception {
         UserDTO userDTO = new UserDTO();
-        userDTO.setEmail("test@example.com");
+        userDTO.setEmail("helper@example.com");
         userDTO.setFirstName("Alice");
         userDTO.setLastName("Smith");
         userDTO.setPassword("password123");
@@ -79,7 +81,7 @@ public class UserControllerTest {
 
         mockMvc.perform(post("/api/v1/users/signup")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\": \"test@example.com\", \"lastName\": \"Smith\", \"firstName\": \"Alice\", \"password\": \"password123\"}"))
+                        .content("{\"email\": \"helper@example.com\", \"lastName\": \"Smith\", \"firstName\": \"Alice\", \"password\": \"password123\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message", is("Email is already in use")));
     }
