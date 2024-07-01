@@ -29,6 +29,9 @@ public class UserService {
     @Autowired
     private EmailServiceImpl emailService;
 
+    @Autowired
+    private PasswordEncoderService passwordEncoderService;
+
     @Value("${app.base.url}")
     private String baseUrl;
 
@@ -42,7 +45,7 @@ public class UserService {
         user.setEmail(userDTO.getEmail());
         user.setLastName(userDTO.getLastName());
         user.setFirstName(userDTO.getFirstName());
-        user.setPassword(userDTO.getPassword());
+        user.setPassword(passwordEncoderService.encodePassword(userDTO.getPassword()));
         user.setActive(false);
         user.setTimestamp(TimestampUtil.getCurrentTimestamp());
         user.setActivationCode(UUID.randomUUID().toString());
@@ -59,7 +62,14 @@ public class UserService {
             throw new EmailSendingFailedException(MessageConstants.EMAIL_SENDING_FAILED_MESSAGE, e);
         }
 
-        UserResponseDTO userResponseDTO = new UserResponseDTO(savedUser.getId(), savedUser.getEmail(), savedUser.getFirstName(), savedUser.getLastName(), savedUser.isActive(), savedUser.getTimestamp());
+        UserResponseDTO userResponseDTO = new UserResponseDTO(
+                savedUser.getId(),
+                savedUser.getEmail(),
+                savedUser.getFirstName(),
+                savedUser.getLastName(),
+                savedUser.isActive(),
+                savedUser.getTimestamp()
+        );
 
         return new ServiceResponse<>(HttpStatus.CREATED, MessageConstants.USER_CREATION_SUCCESS_MESSAGE, userResponseDTO);
     }
