@@ -7,6 +7,7 @@ import com.developerdreamteam.jia.auth.model.dto.UserResponseDTO;
 import com.developerdreamteam.jia.auth.model.entity.User;
 import com.developerdreamteam.jia.auth.repository.UserRepository;
 import com.developerdreamteam.jia.auth.response.ServiceResponse;
+import com.developerdreamteam.jia.auth.service.PasswordEncoderService;
 import com.developerdreamteam.jia.auth.service.UserService;
 import com.developerdreamteam.jia.commons.EmailServiceImpl;
 import com.developerdreamteam.jia.constants.MessageConstants;
@@ -34,6 +35,9 @@ public class UserServiceTest {
     @Mock
     private EmailServiceImpl emailService;
 
+    @Mock
+    private PasswordEncoderService passwordEncoderService;
+
     @InjectMocks
     private UserService userService;
 
@@ -50,6 +54,9 @@ public class UserServiceTest {
         userDTO.setFirstName("Jones");
         userDTO.setLastName("James");
         userDTO.setPassword("password123");
+
+        String encodedPassword = "encodedPassword";
+        when(passwordEncoderService.encodePassword(userDTO.getPassword())).thenReturn(encodedPassword);
 
         when(userRepository.existsByEmail(userDTO.getEmail())).thenReturn(false);
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
@@ -75,6 +82,8 @@ public class UserServiceTest {
         assertEquals("James", response.getData().getLastName());
         assertNotNull(response.getData().getTimestamp());
         assertNotNull(response.getData().getId());
+
+        verify(passwordEncoderService).encodePassword("password123");
     }
 
     @Test
@@ -101,6 +110,9 @@ public class UserServiceTest {
         userDTO.setFirstName("Jones");
         userDTO.setLastName("James");
         userDTO.setPassword("password123");
+
+        String encodedPassword = "encodedPassword";
+        when(passwordEncoderService.encodePassword(userDTO.getPassword())).thenReturn(encodedPassword);
 
         when(userRepository.existsByEmail(userDTO.getEmail())).thenReturn(false);
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
