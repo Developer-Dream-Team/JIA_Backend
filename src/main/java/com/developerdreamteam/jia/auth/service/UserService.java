@@ -1,12 +1,16 @@
 package com.developerdreamteam.jia.auth.service;
 
 import com.developerdreamteam.jia.auth.exceptions.EmailSendingFailedException;
+import com.developerdreamteam.jia.auth.exceptions.UserAlreadyActivatedException;
 import com.developerdreamteam.jia.auth.exceptions.UserAlreadyExistsException;
+import com.developerdreamteam.jia.auth.exceptions.UserNotFoundException;
 import com.developerdreamteam.jia.auth.model.dto.UserDTO;
 import com.developerdreamteam.jia.auth.model.dto.UserResponseDTO;
 import com.developerdreamteam.jia.auth.model.entity.User;
 import com.developerdreamteam.jia.auth.repository.UserRepository;
+import com.developerdreamteam.jia.auth.response.ApiResponse;
 import com.developerdreamteam.jia.auth.response.ServiceResponse;
+import com.developerdreamteam.jia.auth.security.CustomUserDetails;
 import com.developerdreamteam.jia.commons.EmailServiceImpl;
 import com.developerdreamteam.jia.constants.MessageConstants;
 import com.developerdreamteam.jia.util.EmailContentGenerator;
@@ -14,14 +18,19 @@ import com.developerdreamteam.jia.util.TimestampUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 
 import java.util.Optional;
 import java.util.UUID;
 
 @Service
-public class UserService {
+public class UserService implements UserDetailsService {
+
 
     @Autowired
     private UserRepository userRepository;
@@ -34,6 +43,8 @@ public class UserService {
 
     @Value("${app.base.url}")
     private String baseUrl;
+
+    private static final String DEFAULT_ROLE = "ROLE_USER";
 
     @Transactional
     public ServiceResponse<UserResponseDTO> saveUser(UserDTO userDTO) {
@@ -49,6 +60,7 @@ public class UserService {
         user.setActive(false);
         user.setTimestamp(TimestampUtil.getCurrentTimestamp());
         user.setActivationCode(UUID.randomUUID().toString());
+        user.setRole(DEFAULT_ROLE);
 
         User savedUser = userRepository.save(user);
 
@@ -74,7 +86,37 @@ public class UserService {
         return new ServiceResponse<>(HttpStatus.CREATED, MessageConstants.USER_CREATION_SUCCESS_MESSAGE, userResponseDTO);
     }
 
+    @Transactional
+    public ApiResponse activateUser(String activationCode) {
+        Optional<User> userOptional = userRepository.findByActivationCode(activationCode);
+
+        if (userOptional.isPresent()) {
+            User user = userOptional.get();
+
+            if (user.isActive()) {
+                throw new UserAlreadyActivatedException("Account is already activated");
+            }
+
+            user.setActive(true);
+            user.setActivationCode(null);
+            userRepository.save(user);
+
+            return new ApiResponse("Account activated successfully", HttpStatus.OK.value());
+        } else {
+            throw new UserNotFoundException("Invalid activation code");
+        }
+    }
+
+
     public Optional<User> findUserByEmail(String email) {
         return userRepository.findByEmail(email);
+    }
+
+    @Override
+    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+        Optional<User> optionalUserDetails = userRepository.findByEmail(email);
+
+        return optionalUserDetails.map(CustomUserDetails::new)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found!"));
     }
 }

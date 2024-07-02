@@ -23,5 +23,6 @@ public class User {
     private boolean active;
     private String timestamp;
     private String activationCode;
+    private String role;
 
 }

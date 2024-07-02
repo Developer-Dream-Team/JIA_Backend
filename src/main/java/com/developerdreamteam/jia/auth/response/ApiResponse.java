@@ -1,19 +1,15 @@
 package com.developerdreamteam.jia.auth.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import org.springframework.http.HttpStatus;
+import lombok.*;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class ServiceResponse<T> {
+public class ApiResponse {
 
-    private HttpStatus status;
     private String message;
-    private T data;
+    private int statusCode;
 
 }
