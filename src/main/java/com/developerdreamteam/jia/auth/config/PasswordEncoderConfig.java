@@ -9,8 +9,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 @Configuration
 public class PasswordEncoderConfig {
 
+
     @Autowired
     private Argon2Config argon2Config;
+
 
     @Bean
     public PasswordEncoder passwordEncoder() {
