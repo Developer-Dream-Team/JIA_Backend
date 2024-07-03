@@ -5,10 +5,9 @@ import com.developerdreamteam.jia.auth.exceptions.UserAlreadyExistsException;
 import com.developerdreamteam.jia.auth.model.dto.UserDTO;
 import com.developerdreamteam.jia.auth.model.dto.UserResponseDTO;
 import com.developerdreamteam.jia.auth.model.entity.User;
-import com.developerdreamteam.jia.auth.repository.UserRepository;
+import com.developerdreamteam.jia.auth.repository.AuthRepository;
 import com.developerdreamteam.jia.auth.response.ServiceResponse;
-import com.developerdreamteam.jia.auth.service.PasswordEncoderService;
-import com.developerdreamteam.jia.auth.service.UserService;
+import com.developerdreamteam.jia.auth.service.AuthService;
 import com.developerdreamteam.jia.commons.EmailServiceImpl;
 import com.developerdreamteam.jia.constants.MessageConstants;
 import com.developerdreamteam.jia.util.TimestampUtil;
@@ -18,6 +17,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Optional;
@@ -27,24 +27,24 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-public class UserServiceTest {
+public class AuthServiceTest {
 
     @Mock
-    private UserRepository userRepository;
+    private AuthRepository authRepository;
 
     @Mock
     private EmailServiceImpl emailService;
 
     @Mock
-    private PasswordEncoderService passwordEncoderService;
+    private PasswordEncoder passwordEncoder;
 
     @InjectMocks
-    private UserService userService;
+    private AuthService authService;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        ReflectionTestUtils.setField(userService, "baseUrl", "http://localhost:8080/");
+        ReflectionTestUtils.setField(authService, "baseUrl", "http://localhost:8080/");
     }
 
     @Test
@@ -56,12 +56,12 @@ public class UserServiceTest {
         userDTO.setPassword("password123");
 
         String encodedPassword = "encodedPassword";
-        when(passwordEncoderService.encodePassword(userDTO.getPassword())).thenReturn(encodedPassword);
+        when(passwordEncoder.encode(userDTO.getPassword())).thenReturn(encodedPassword);
 
-        when(userRepository.existsByEmail(userDTO.getEmail())).thenReturn(false);
-        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
+        when(authRepository.existsByEmail(userDTO.getEmail())).thenReturn(false);
+        when(authRepository.save(any(User.class))).thenAnswer(invocation -> {
             User user = invocation.getArgument(0);
-            user.setId("1");
+            user.set_id("1");
             user.setActivationCode(UUID.randomUUID().toString());
             return user;
         });
@@ -69,10 +69,10 @@ public class UserServiceTest {
         doNothing().when(emailService).sendSimpleMessage(
                 eq("helper@example.com"),
                 eq("Account Activation"),
-                contains("http://localhost:8080/api/v1/users/signup/confirmation?success=")
+                contains("http://localhost:8080/api/v1/auth/signup/confirmation?success=")
         );
 
-        ServiceResponse<UserResponseDTO> response = userService.saveUser(userDTO);
+        ServiceResponse<UserResponseDTO> response = authService.saveUser(userDTO);
 
         assertEquals(HttpStatus.CREATED, response.getStatus());
         assertNotNull(response.getData());
@@ -83,7 +83,7 @@ public class UserServiceTest {
         assertNotNull(response.getData().getTimestamp());
         assertNotNull(response.getData().getId());
 
-        verify(passwordEncoderService).encodePassword("password123");
+        verify(passwordEncoder).encode("password123");
     }
 
     @Test
@@ -94,10 +94,10 @@ public class UserServiceTest {
         userDTO.setLastName("James");
         userDTO.setPassword("password123");
 
-        when(userRepository.existsByEmail(userDTO.getEmail())).thenReturn(true);
+        when(authRepository.existsByEmail(userDTO.getEmail())).thenReturn(true);
 
         UserAlreadyExistsException exception = assertThrows(UserAlreadyExistsException.class, () -> {
-            userService.saveUser(userDTO);
+            authService.saveUser(userDTO);
         });
 
         assertEquals(MessageConstants.EMAIL_IN_USE_MESSAGE, exception.getMessage());
@@ -112,12 +112,12 @@ public class UserServiceTest {
         userDTO.setPassword("password123");
 
         String encodedPassword = "encodedPassword";
-        when(passwordEncoderService.encodePassword(userDTO.getPassword())).thenReturn(encodedPassword);
+        when(passwordEncoder.encode(userDTO.getPassword())).thenReturn(encodedPassword);
 
-        when(userRepository.existsByEmail(userDTO.getEmail())).thenReturn(false);
-        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
+        when(authRepository.existsByEmail(userDTO.getEmail())).thenReturn(false);
+        when(authRepository.save(any(User.class))).thenAnswer(invocation -> {
             User user = invocation.getArgument(0);
-            user.setId("1");
+            user.set_id("1");
             user.setActivationCode(UUID.randomUUID().toString());
             return user;
         });
@@ -125,11 +125,11 @@ public class UserServiceTest {
         doThrow(new RuntimeException("Email sending failed")).when(emailService).sendSimpleMessage(
                 eq("helper@example.com"),
                 eq("Account Activation"),
-                contains("http://localhost:8080/api/v1/users/signup/confirmation?success=")
+                contains("http://localhost:8080/api/v1/auth/signup/confirmation?success=")
         );
 
         EmailSendingFailedException exception = assertThrows(EmailSendingFailedException.class, () -> {
-            userService.saveUser(userDTO);
+            authService.saveUser(userDTO);
         });
 
         assertEquals(MessageConstants.EMAIL_SENDING_FAILED_MESSAGE, exception.getMessage());
@@ -138,18 +138,18 @@ public class UserServiceTest {
     @Test
     void testFindUserByEmail() {
         User user = new User();
-        user.setId("1");
+        user.set_id("1");
         user.setEmail("helper@example.com");
         user.setFirstName("Brandon");
         user.setLastName("Phillipe");
         user.setPassword("password123");
         user.setTimestamp(TimestampUtil.getCurrentTimestamp());
 
-        when(userRepository.findByEmail("helper@example.com")).thenReturn(Optional.of(user));
+        when(authRepository.findByEmail("helper@example.com")).thenReturn(Optional.of(user));
 
-        Optional<User> foundUser = userService.findUserByEmail("helper@example.com");
+        Optional<User> foundUser = authService.findUserByEmail("helper@example.com");
 
         assertTrue(foundUser.isPresent());
-        assertEquals(user.getId(), foundUser.get().getId());
+        assertEquals(user.get_id(), foundUser.get().get_id());
     }
 }

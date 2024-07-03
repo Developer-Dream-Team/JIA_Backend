@@ -1,5 +1,6 @@
-package com.developerdreamteam.jia.auth.security;
+package com.developerdreamteam.jia.auth.security.custom;
 
+import com.developerdreamteam.jia.auth.model.dto.UserDetailsDTO;
 import com.developerdreamteam.jia.auth.model.entity.User;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -21,22 +22,25 @@ import java.util.stream.Collectors;
 @AllArgsConstructor
 public class CustomUserDetails implements UserDetails {
 
-    private String email;
+    private String id;
+    private String username;
     private String password;
     private List<GrantedAuthority> authorities;
     private String firstName;
+    private String lastName;
 
-    public CustomUserDetails(User user) {
-        email = user.getEmail();
-        password = user.getPassword();
-        firstName = user.getFirstName();
-        authorities = user.getRole() != null ?
+    public CustomUserDetails(User user, UserDetailsDTO userDetailsDTO) {
+        this.id = user.get_id();
+        this.username = user.getEmail();
+        this.password = user.getPassword();
+        this.firstName = user.getFirstName();
+        this.lastName = user.getLastName();
+        this.authorities = user.getRole() != null ?
                 Arrays.stream(user.getRole().split(","))
                         .map(SimpleGrantedAuthority::new)
                         .collect(Collectors.toList()) :
                 Collections.emptyList();
     }
-
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -50,7 +54,7 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public String getUsername() {
-        return email;
+        return username;
     }
 
     @Override

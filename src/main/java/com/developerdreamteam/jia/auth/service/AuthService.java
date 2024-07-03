@@ -5,12 +5,13 @@ import com.developerdreamteam.jia.auth.exceptions.UserAlreadyActivatedException;
 import com.developerdreamteam.jia.auth.exceptions.UserAlreadyExistsException;
 import com.developerdreamteam.jia.auth.exceptions.UserNotFoundException;
 import com.developerdreamteam.jia.auth.model.dto.UserDTO;
+import com.developerdreamteam.jia.auth.model.dto.UserDetailsDTO;
 import com.developerdreamteam.jia.auth.model.dto.UserResponseDTO;
 import com.developerdreamteam.jia.auth.model.entity.User;
-import com.developerdreamteam.jia.auth.repository.UserRepository;
+import com.developerdreamteam.jia.auth.repository.AuthRepository;
 import com.developerdreamteam.jia.auth.response.ApiResponse;
 import com.developerdreamteam.jia.auth.response.ServiceResponse;
-import com.developerdreamteam.jia.auth.security.CustomUserDetails;
+import com.developerdreamteam.jia.auth.security.custom.CustomUserDetails;
 import com.developerdreamteam.jia.commons.EmailServiceImpl;
 import com.developerdreamteam.jia.constants.MessageConstants;
 import com.developerdreamteam.jia.util.EmailContentGenerator;
@@ -21,25 +22,27 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 
+import java.util.Collections;
 import java.util.Optional;
 import java.util.UUID;
 
 @Service
-public class UserService implements UserDetailsService {
+public class AuthService implements UserDetailsService {
 
 
     @Autowired
-    private UserRepository userRepository;
+    private AuthRepository authRepository;
 
     @Autowired
     private EmailServiceImpl emailService;
 
     @Autowired
-    private PasswordEncoderService passwordEncoderService;
+    private PasswordEncoder passwordEncoder;
 
     @Value("${app.base.url}")
     private String baseUrl;
@@ -48,7 +51,7 @@ public class UserService implements UserDetailsService {
 
     @Transactional
     public ServiceResponse<UserResponseDTO> saveUser(UserDTO userDTO) {
-        if (userRepository.existsByEmail(userDTO.getEmail())) {
+        if (authRepository.existsByEmail(userDTO.getEmail())) {
             throw new UserAlreadyExistsException(MessageConstants.EMAIL_IN_USE_MESSAGE);
         }
 
@@ -56,15 +59,15 @@ public class UserService implements UserDetailsService {
         user.setEmail(userDTO.getEmail());
         user.setLastName(userDTO.getLastName());
         user.setFirstName(userDTO.getFirstName());
-        user.setPassword(passwordEncoderService.encodePassword(userDTO.getPassword()));
+        user.setPassword(passwordEncoder.encode(userDTO.getPassword()));
         user.setActive(false);
         user.setTimestamp(TimestampUtil.getCurrentTimestamp());
         user.setActivationCode(UUID.randomUUID().toString());
         user.setRole(DEFAULT_ROLE);
 
-        User savedUser = userRepository.save(user);
+        User savedUser = authRepository.save(user);
 
-        String activationLink = baseUrl + "api/v1/users/signup/confirmation?success=" + user.getActivationCode();
+        String activationLink = baseUrl + "api/v1/auth/signup/confirmation?success=" + user.getActivationCode();
 
         String emailContent = EmailContentGenerator.generateActivationEmailContent(activationLink);
 
@@ -75,7 +78,7 @@ public class UserService implements UserDetailsService {
         }
 
         UserResponseDTO userResponseDTO = new UserResponseDTO(
-                savedUser.getId(),
+                savedUser.get_id(),
                 savedUser.getEmail(),
                 savedUser.getFirstName(),
                 savedUser.getLastName(),
@@ -88,7 +91,7 @@ public class UserService implements UserDetailsService {
 
     @Transactional
     public ApiResponse activateUser(String activationCode) {
-        Optional<User> userOptional = userRepository.findByActivationCode(activationCode);
+        Optional<User> userOptional = authRepository.findByActivationCode(activationCode);
 
         if (userOptional.isPresent()) {
             User user = userOptional.get();
@@ -99,7 +102,7 @@ public class UserService implements UserDetailsService {
 
             user.setActive(true);
             user.setActivationCode(null);
-            userRepository.save(user);
+            authRepository.save(user);
 
             return new ApiResponse("Account activated successfully", HttpStatus.OK.value());
         } else {
@@ -107,16 +110,23 @@ public class UserService implements UserDetailsService {
         }
     }
 
+    @Override
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        Optional<User> optionalUserDetails = authRepository.findByEmail(username);
 
-    public Optional<User> findUserByEmail(String email) {
-        return userRepository.findByEmail(email);
+        return optionalUserDetails.map(user -> {
+            UserDetailsDTO userDetailsDTO = new UserDetailsDTO(
+                    user.get_id(),
+                    user.getEmail(),
+                    user.getFirstName(),
+                    user.getLastName(),
+                    Collections.singletonList(user.getRole())
+            );
+            return new CustomUserDetails(user, userDetailsDTO);
+        }).orElseThrow(() -> new UsernameNotFoundException("User not found!"));
     }
 
-    @Override
-    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        Optional<User> optionalUserDetails = userRepository.findByEmail(email);
-
-        return optionalUserDetails.map(CustomUserDetails::new)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found!"));
+    public Optional<User> findUserByEmail(String email) {
+        return authRepository.findByEmail(email);
     }
 }

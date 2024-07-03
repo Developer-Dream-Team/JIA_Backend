@@ -1,4 +1,4 @@
-package com.developerdreamteam.jia.auth.security;
+package com.developerdreamteam.jia.auth.security.matchers;
 
 import lombok.Getter;
 
@@ -6,7 +6,7 @@ import lombok.Getter;
 public enum SecurityMatchers {
 
     PUBLIC_ENDPOINTS(new String[]{
-            "/api/v1/users/signup", "/api/v1/users/signup/confirmation"
+            "/api/v1/auth/signup", "/api/v1/auth/signup/confirmation", "/api/v1/auth/login"
     }),
 
     STATIC_RESOURCES(new String[]{

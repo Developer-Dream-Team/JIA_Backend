@@ -4,14 +4,15 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class UserResponseDTO {
+public class UserDetailsDTO {
     private String id;
-    private String email;
+    private String username;
     private String firstName;
     private String lastName;
-    private boolean active;
-    private String timestamp;
+    private List<String> roles;
 }

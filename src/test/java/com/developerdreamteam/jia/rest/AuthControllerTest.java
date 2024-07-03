@@ -3,8 +3,8 @@ package com.developerdreamteam.jia.rest;
 import com.developerdreamteam.jia.auth.model.dto.UserDTO;
 import com.developerdreamteam.jia.auth.model.dto.UserResponseDTO;
 import com.developerdreamteam.jia.auth.response.ServiceResponse;
-import com.developerdreamteam.jia.auth.rest.UserController;
-import com.developerdreamteam.jia.auth.service.UserService;
+import com.developerdreamteam.jia.auth.rest.AuthController;
+import com.developerdreamteam.jia.auth.service.AuthService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -21,20 +21,20 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-public class UserControllerTest {
+public class AuthControllerTest {
 
     private MockMvc mockMvc;
 
     @Mock
-    private UserService userService;
+    private AuthService authService;
 
     @InjectMocks
-    private UserController userController;
+    private AuthController authController;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        mockMvc = MockMvcBuilders.standaloneSetup(userController).build();
+        mockMvc = MockMvcBuilders.standaloneSetup(authController).build();
     }
 
     @Test
@@ -55,9 +55,9 @@ public class UserControllerTest {
 
         ServiceResponse<UserResponseDTO> serviceResponse = new ServiceResponse<>(HttpStatus.CREATED, "User created successfully", userResponseDTO);
 
-        when(userService.saveUser(userDTO)).thenReturn(serviceResponse);
+        when(authService.saveUser(userDTO)).thenReturn(serviceResponse);
 
-        mockMvc.perform(post("/api/v1/users/signup")
+        mockMvc.perform(post("/api/v1/auth/signup")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"email\": \"helper@example.com\", \"lastName\": \"Smith\", \"firstName\": \"Alice\", \"password\": \"password123\"}"))
                 .andExpect(status().isCreated())
@@ -77,9 +77,9 @@ public class UserControllerTest {
 
         ServiceResponse<UserResponseDTO> serviceResponse = new ServiceResponse<>(HttpStatus.BAD_REQUEST, "Email is already in use", null);
 
-        when(userService.saveUser(userDTO)).thenReturn(serviceResponse);
+        when(authService.saveUser(userDTO)).thenReturn(serviceResponse);
 
-        mockMvc.perform(post("/api/v1/users/signup")
+        mockMvc.perform(post("/api/v1/auth/signup")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"email\": \"helper@example.com\", \"lastName\": \"Smith\", \"firstName\": \"Alice\", \"password\": \"password123\"}"))
                 .andExpect(status().isBadRequest())
