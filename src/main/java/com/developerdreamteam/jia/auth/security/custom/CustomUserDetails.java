@@ -28,6 +28,7 @@ public class CustomUserDetails implements UserDetails {
     private List<GrantedAuthority> authorities;
     private String firstName;
     private String lastName;
+    private boolean active;
 
     public CustomUserDetails(User user, UserDetailsDTO userDetailsDTO) {
         this.id = user.get_id();
@@ -35,6 +36,7 @@ public class CustomUserDetails implements UserDetails {
         this.password = user.getPassword();
         this.firstName = user.getFirstName();
         this.lastName = user.getLastName();
+        this.active = user.isActive();
         this.authorities = user.getRole() != null ?
                 Arrays.stream(user.getRole().split(","))
                         .map(SimpleGrantedAuthority::new)
@@ -74,6 +76,10 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return true;
+        return active;
+    }
+
+    public boolean isActive() {
+        return active;
     }
 }

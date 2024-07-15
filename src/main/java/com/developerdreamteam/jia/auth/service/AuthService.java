@@ -110,6 +110,10 @@ public class AuthService implements UserDetailsService {
         }
     }
 
+    public Optional<User> findUserByEmail(String email) {
+        return authRepository.findByEmail(email);
+    }
+
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         Optional<User> optionalUserDetails = authRepository.findByEmail(username);
@@ -124,9 +128,5 @@ public class AuthService implements UserDetailsService {
             );
             return new CustomUserDetails(user, userDetailsDTO);
         }).orElseThrow(() -> new UsernameNotFoundException("User not found!"));
-    }
-
-    public Optional<User> findUserByEmail(String email) {
-        return authRepository.findByEmail(email);
     }
 }
