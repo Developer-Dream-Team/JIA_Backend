@@ -102,4 +102,72 @@ public class AuthControllerTest {
                 .andExpect(jsonPath("$.message", is("Email is already in use")));
     }
 
+
+    @Test
+    void testResendVerificationEmailSuccess() throws Exception {
+        String email = "helper@example.com";
+        User user = new User();
+        user.setEmail(email);
+        user.setActive(false);
+        user.setActivationExpiry(LocalDateTime.now().minusDays(1));
+
+        when(authRepository.findByEmail(email)).thenReturn(Optional.of(user));
+
+        when(authRepository.save(any(User.class))).thenReturn(user);
+
+        doNothing().when(emailService).sendSimpleMessage(anyString(), anyString(), anyString());
+
+        ResendVerificationEmailDTO resendVerificationEmailDTO = new ResendVerificationEmailDTO();
+        resendVerificationEmailDTO.setEmail(email);
+
+        ApiResponse apiResponse = new ApiResponse("Verification email resent successfully", HttpStatus.OK.value());
+        when(authService.resendVerificationEmail(any(ResendVerificationEmailDTO.class))).thenReturn(apiResponse);
+
+        mockMvc.perform(post("/api/v1/auth/resend-verification")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\": \"helper@example.com\"}"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.message").value("Verification email resent successfully"))
+                .andExpect(jsonPath("$.statusCode").value(HttpStatus.OK.value()));
+    }
+
+    @Test
+    public void testResendVerificationEmail_UserAlreadyActive() throws Exception {
+        String email = "active@example.com";
+        User user = new User();
+        user.setEmail(email);
+        user.setActive(true);
+
+        when(authRepository.findByEmail(email)).thenReturn(Optional.of(user));
+
+        ApiResponse apiResponse = new ApiResponse("User is already activated", HttpStatus.BAD_REQUEST.value());
+        when(authService.resendVerificationEmail(any(ResendVerificationEmailDTO.class))).thenReturn(apiResponse);
+
+        mockMvc.perform(post("/api/v1/auth/resend-verification")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\": \"active@example.com\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.message").value("User is already activated"))
+                .andExpect(jsonPath("$.statusCode").value(HttpStatus.BAD_REQUEST.value()));
+    }
+
+    @Test
+    public void testResendVerificationEmail_UserNotFound() throws Exception {
+        String email = "nonexistent@example.com";
+
+        when(authRepository.findByEmail(email)).thenReturn(Optional.empty());
+
+        ApiResponse apiResponse = new ApiResponse("User not found", HttpStatus.NOT_FOUND.value());
+        when(authService.resendVerificationEmail(any(ResendVerificationEmailDTO.class))).thenReturn(apiResponse);
+
+        mockMvc.perform(post("/api/v1/auth/resend-verification")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\": \"nonexistent@example.com\"}"))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.message").value("User not found"))
+                .andExpect(jsonPath("$.statusCode").value(HttpStatus.NOT_FOUND.value()));
+    }
 }
