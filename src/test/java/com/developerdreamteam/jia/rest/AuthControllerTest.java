@@ -1,10 +1,15 @@
 package com.developerdreamteam.jia.rest;
 
+import com.developerdreamteam.jia.auth.model.dto.ResendVerificationEmailDTO;
 import com.developerdreamteam.jia.auth.model.dto.UserDTO;
 import com.developerdreamteam.jia.auth.model.dto.UserResponseDTO;
+import com.developerdreamteam.jia.auth.model.entity.User;
+import com.developerdreamteam.jia.auth.repository.AuthRepository;
+import com.developerdreamteam.jia.auth.response.ApiResponse;
 import com.developerdreamteam.jia.auth.response.ServiceResponse;
 import com.developerdreamteam.jia.auth.rest.AuthController;
 import com.developerdreamteam.jia.auth.service.AuthService;
+import com.developerdreamteam.jia.commons.EmailService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -15,11 +20,16 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import java.time.LocalDateTime;
+import java.util.Optional;
+
 import static org.hamcrest.Matchers.is;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 public class AuthControllerTest {
 
@@ -30,6 +40,12 @@ public class AuthControllerTest {
 
     @InjectMocks
     private AuthController authController;
+
+    @Mock
+    private AuthRepository authRepository;
+
+    @Mock
+    private EmailService emailService;
 
     @BeforeEach
     void setUp() {
@@ -85,4 +101,5 @@ public class AuthControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message", is("Email is already in use")));
     }
+
 }

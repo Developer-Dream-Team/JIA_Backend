@@ -10,6 +10,7 @@ import com.developerdreamteam.jia.auth.security.jwt.JwtTokenUtil;
 import com.developerdreamteam.jia.auth.service.AuthService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -96,5 +97,10 @@ public class AuthController {
         }
     }
 
+    @PostMapping("/resend-verification")
+    public ResponseEntity<ApiResponse> resendVerificationEmail(@RequestBody ResendVerificationEmailDTO resendVerificationEmailDTO) {
+        ApiResponse response = authService.resendVerificationEmail(resendVerificationEmailDTO);
+        return ResponseEntity.status(response.getStatusCode()).contentType(MediaType.APPLICATION_JSON).body(response);
+    }
 
 }

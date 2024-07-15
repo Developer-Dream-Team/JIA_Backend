@@ -6,6 +6,8 @@ import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.time.LocalDateTime;
+
 
 @Data
 @AllArgsConstructor
@@ -23,5 +25,5 @@ public class User {
     private String timestamp;
     private String activationCode;
     private String role;
-
+    private LocalDateTime activationExpiry;
 }

@@ -1,9 +1,7 @@
 package com.developerdreamteam.jia.auth.service;
 
-import com.developerdreamteam.jia.auth.exceptions.EmailSendingFailedException;
-import com.developerdreamteam.jia.auth.exceptions.UserAlreadyActivatedException;
-import com.developerdreamteam.jia.auth.exceptions.UserAlreadyExistsException;
-import com.developerdreamteam.jia.auth.exceptions.UserNotFoundException;
+import com.developerdreamteam.jia.auth.exceptions.*;
+import com.developerdreamteam.jia.auth.model.dto.ResendVerificationEmailDTO;
 import com.developerdreamteam.jia.auth.model.dto.UserDTO;
 import com.developerdreamteam.jia.auth.model.dto.UserDetailsDTO;
 import com.developerdreamteam.jia.auth.model.dto.UserResponseDTO;
@@ -11,6 +9,7 @@ import com.developerdreamteam.jia.auth.model.entity.User;
 import com.developerdreamteam.jia.auth.repository.AuthRepository;
 import com.developerdreamteam.jia.auth.response.ApiResponse;
 import com.developerdreamteam.jia.auth.response.ServiceResponse;
+import com.developerdreamteam.jia.auth.role.Roles;
 import com.developerdreamteam.jia.auth.security.custom.CustomUserDetails;
 import com.developerdreamteam.jia.commons.EmailServiceImpl;
 import com.developerdreamteam.jia.constants.MessageConstants;
@@ -27,6 +26,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.Optional;
 import java.util.UUID;
@@ -47,8 +47,6 @@ public class AuthService implements UserDetailsService {
     @Value("${app.base.url}")
     private String baseUrl;
 
-    private static final String DEFAULT_ROLE = "ROLE_USER";
-
     @Transactional
     public ServiceResponse<UserResponseDTO> saveUser(UserDTO userDTO) {
         if (authRepository.existsByEmail(userDTO.getEmail())) {
@@ -63,7 +61,8 @@ public class AuthService implements UserDetailsService {
         user.setActive(false);
         user.setTimestamp(TimestampUtil.getCurrentTimestamp());
         user.setActivationCode(UUID.randomUUID().toString());
-        user.setRole(DEFAULT_ROLE);
+        user.setRole(String.valueOf(Roles.ROLE_USER));
+        user.setActivationExpiry(TimestampUtil.TimeLimit());
 
         User savedUser = authRepository.save(user);
 
@@ -99,6 +98,9 @@ public class AuthService implements UserDetailsService {
             if (user.isActive()) {
                 throw new UserAlreadyActivatedException("Account is already activated");
             }
+            else if (user.getActivationExpiry().isBefore((LocalDateTime.now()))) {
+                throw new ActivationCodeExpiredException("Activation code has expired");
+            }
 
             user.setActive(true);
             user.setActivationCode(null);
@@ -107,6 +109,37 @@ public class AuthService implements UserDetailsService {
             return new ApiResponse("Account activated successfully", HttpStatus.OK.value());
         } else {
             throw new UserNotFoundException("Invalid activation code");
+        }
+    }
+
+    @Transactional
+    public ApiResponse resendVerificationEmail(ResendVerificationEmailDTO resendVerificationEmailDTO) {
+        Optional<User> userOptional = authRepository.findByEmail(resendVerificationEmailDTO.getEmail());
+
+        if(userOptional.isPresent() && !userOptional.get().isActive()) {
+            User user = userOptional.get();
+
+            if (user.getActivationExpiry() == null || LocalDateTime.now().isAfter(user.getActivationExpiry())) {
+                user.setActivationCode(UUID.randomUUID().toString());
+                user.setActivationExpiry(TimestampUtil.TimeLimit());
+                authRepository.save(user);
+
+                String activationLink = baseUrl + "/api/v1/auth/signup/confirmation?success="+ user.getActivationCode();
+                String emailContent = EmailContentGenerator.generateActivationEmailContent(activationLink);
+
+                try {
+                    emailService.sendSimpleMessage(user.getEmail(), "Account Activation", emailContent);
+                } catch (Exception e) {
+                    throw new EmailSendingFailedException(MessageConstants.EMAIL_SENDING_FAILED_MESSAGE, e);
+                }
+                return  new ApiResponse("Verification email resent successfully", HttpStatus.OK.value());
+            } else {
+                return new ApiResponse("Activation email already sent recently. Please check your email.", HttpStatus.OK.value());
+            }
+        }
+
+        else {
+            throw new UserNotFoundException("user not found or already activated");
         }
     }
 
