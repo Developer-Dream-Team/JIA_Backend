@@ -104,7 +104,7 @@ public class AuthControllerTest {
 
 
     @Test
-    void testResendVerificationEmailSuccess() throws Exception {
+    void testResendVerificationEmail_Success() throws Exception {
         String email = "helper@example.com";
         User user = new User();
         user.setEmail(email);
