@@ -13,14 +13,17 @@ import jakarta.mail.internet.MimeMessage;
 @Service
 public class EmailServiceImpl implements EmailService {
 
-    @Autowired
-    private Session emailSession;
+    private final Session emailSession;
 
-    @Autowired
-    private Transport emailTransport;
+    private final Transport emailTransport;
 
     @Value("${email.sender.address}")
     private String senderAddress;
+
+    public EmailServiceImpl(Session emailSession, Transport emailTransport) {
+        this.emailSession = emailSession;
+        this.emailTransport = emailTransport;
+    }
 
     public void sendSimpleMessage(String to, String subject, String text) throws Exception {
         MimeMessage message = new MimeMessage(emailSession);

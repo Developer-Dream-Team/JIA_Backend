@@ -8,16 +8,17 @@ import com.developerdreamteam.jia.auth.response.ServiceResponse;
 import com.developerdreamteam.jia.auth.security.custom.CustomUserDetails;
 import com.developerdreamteam.jia.auth.security.jwt.JwtTokenUtil;
 import com.developerdreamteam.jia.auth.service.AuthService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.authentication.*;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.stream.Collectors;
@@ -36,6 +37,9 @@ public class AuthController {
     @Autowired
     private JwtTokenUtil jwtTokenUtil;
 
+    private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
+
+
     @PostMapping("/signup")
     public ResponseEntity<ServiceResponse<UserResponseDTO>> signup(@RequestBody UserDTO userDTO) {
         ServiceResponse<UserResponseDTO> response = authService.saveUser(userDTO);
@@ -45,13 +49,16 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<ServiceResponse<AuthResponseDTO>> login(@RequestBody LoginDTO loginDTO) {
         try {
-            Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(loginDTO.getUsername(), loginDTO.getPassword())
-            );
+            CustomUserDetails userDetails = (CustomUserDetails) authService.loadUserByUsername(loginDTO.getUsername());
 
+            if (!userDetails.isActive()) {
+                ServiceResponse<AuthResponseDTO> errorResponse = new ServiceResponse<>(HttpStatus.UNAUTHORIZED, "Email is not verified yet. Please check your email for the verification link.", null);
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+            }
+
+            Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(loginDTO.getUsername(), loginDTO.getPassword()));
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
-            CustomUserDetails userDetails = (CustomUserDetails) authService.loadUserByUsername(loginDTO.getUsername());
             String accessToken = jwtTokenUtil.generateAccessToken(userDetails);
             String refreshToken = jwtTokenUtil.generateRefreshToken(userDetails);
 
@@ -73,15 +80,24 @@ public class AuthController {
             return ResponseEntity.ok(response);
 
         } catch (BadCredentialsException e) {
-            ServiceResponse<AuthResponseDTO> errorResponse = new ServiceResponse<>(
-                    HttpStatus.UNAUTHORIZED, "Invalid username or password", null);
+            ServiceResponse<AuthResponseDTO> errorResponse = new ServiceResponse<>(HttpStatus.UNAUTHORIZED, "Invalid username or password. Please try again with correct credentials.", null);
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+        } catch (DisabledException e) {
+            ServiceResponse<AuthResponseDTO> errorResponse = new ServiceResponse<>(HttpStatus.FORBIDDEN, "User account is disabled. Please contact support.", null);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
+        } catch (LockedException e) {
+            ServiceResponse<AuthResponseDTO> errorResponse = new ServiceResponse<>(HttpStatus.FORBIDDEN, "User account is locked. Please contact support.", null);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
+        } catch (UsernameNotFoundException e) {
+            ServiceResponse<AuthResponseDTO> errorResponse = new ServiceResponse<>(HttpStatus.NOT_FOUND, "Username not found. Please check your credentials and try again.", null);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
         } catch (Exception e) {
-            ServiceResponse<AuthResponseDTO> errorResponse = new ServiceResponse<>(
-                    HttpStatus.INTERNAL_SERVER_ERROR, "An error occurred", null);
+            logger.error("An unexpected error occurred during login", e);
+            ServiceResponse<AuthResponseDTO> errorResponse = new ServiceResponse<>(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred during login. Please try again later.", null);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
     }
+
 
     @GetMapping("/signup/confirmation")
     public ResponseEntity<ApiResponse> confirmSignup(@RequestParam("success") String activationCode) {
@@ -96,6 +112,7 @@ public class AuthController {
             return ResponseEntity.status(404).body(response);
         }
     }
+
 
     @PostMapping("/resend-verification")
     public ResponseEntity<ApiResponse> resendVerificationEmail(@RequestBody ResendVerificationEmailDTO resendVerificationEmailDTO) {

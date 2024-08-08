@@ -2,7 +2,6 @@ package com.developerdreamteam.jia.auth.model.dto;
 
 import lombok.Data;
 
-
 @Data
 public class UserDTO {
     private String email;
