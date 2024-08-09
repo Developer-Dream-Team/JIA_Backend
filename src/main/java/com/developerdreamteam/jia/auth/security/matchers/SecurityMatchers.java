@@ -6,7 +6,7 @@ import lombok.Getter;
 public enum SecurityMatchers {
 
     PUBLIC_ENDPOINTS(new String[]{
-            "/api/v1/auth/signup", "/api/v1/auth/signup/confirmation", "/api/v1/auth/login"
+            "/api/v1/auth/signup", "/api/v1/auth/signup/confirmation", "/api/v1/auth/login", "/api/v1/auth/resend-verification"
     }),
 
     STATIC_RESOURCES(new String[]{

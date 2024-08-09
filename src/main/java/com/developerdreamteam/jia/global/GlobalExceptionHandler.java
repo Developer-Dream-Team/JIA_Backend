@@ -1,9 +1,6 @@
 package com.developerdreamteam.jia.global;
 
-import com.developerdreamteam.jia.auth.exceptions.EmailSendingFailedException;
-import com.developerdreamteam.jia.auth.exceptions.UserAlreadyActivatedException;
-import com.developerdreamteam.jia.auth.exceptions.UserAlreadyExistsException;
-import com.developerdreamteam.jia.auth.exceptions.UserNotFoundException;
+import com.developerdreamteam.jia.auth.exceptions.*;
 import com.developerdreamteam.jia.auth.response.ServiceResponse;
 import com.developerdreamteam.jia.constants.MessageConstants;
 import org.springframework.http.HttpStatus;
@@ -41,6 +38,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ServiceResponse<?>> handleGenericException(Exception ex) {
         ServiceResponse<?> response = new ServiceResponse<>(HttpStatus.INTERNAL_SERVER_ERROR, MessageConstants.GENERIC_ERROR_MESSAGE, null);
+        return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+    @ExceptionHandler(ActivationCodeExpiredException.class)
+    public ResponseEntity<ServiceResponse<?>> handleActivationCodeExpiredException(ActivationCodeExpiredException ex) {
+        ServiceResponse<?> response = new ServiceResponse<>(HttpStatus.BAD_REQUEST, "Activation code has expired", null);
         return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }

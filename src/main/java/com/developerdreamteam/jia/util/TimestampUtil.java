@@ -11,4 +11,8 @@ public class TimestampUtil {
         return LocalDateTime.now().format(formatter);
     }
 
+    public static LocalDateTime TimeLimit() {
+        return LocalDateTime.now().plusHours(24);
+    }
+
 }
