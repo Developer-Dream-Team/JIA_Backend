@@ -116,7 +116,7 @@ public class AuthService implements UserDetailsService {
     public ApiResponse resendVerificationEmail(ResendVerificationEmailDTO resendVerificationEmailDTO) {
         Optional<User> userOptional = authRepository.findByEmail(resendVerificationEmailDTO.getEmail());
 
-        if(userOptional.isPresent() && !userOptional.get().isActive()) {
+        if (userOptional.isPresent() && !userOptional.get().isActive()) {
             User user = userOptional.get();
 
             if (user.getActivationExpiry() == null || LocalDateTime.now().isAfter(user.getActivationExpiry())) {
@@ -124,7 +124,7 @@ public class AuthService implements UserDetailsService {
                 user.setActivationExpiry(TimestampUtil.TimeLimit());
                 authRepository.save(user);
 
-                String activationLink = baseUrl + "/api/v1/auth/signup/confirmation?success="+ user.getActivationCode();
+                String activationLink = baseUrl + "/api/v1/auth/signup/confirmation?success=" + user.getActivationCode();
                 String emailContent = EmailContentGenerator.generateActivationEmailContent(activationLink);
 
                 try {
@@ -132,15 +132,14 @@ public class AuthService implements UserDetailsService {
                 } catch (Exception e) {
                     throw new EmailSendingFailedException(MessageConstants.EMAIL_SENDING_FAILED_MESSAGE, e);
                 }
-                return  new ApiResponse("Verification email resent successfully", HttpStatus.OK.value());
+                return new ApiResponse("Verification email resent successfully", HttpStatus.OK.value());
             } else {
                 return new ApiResponse("Activation email already sent recently. Please check your email.", HttpStatus.OK.value());
             }
-        }
-
-        else {
+        } else {
             throw new UserNotFoundException("user not found or already activated");
         }
+    }
 
     public Optional<User> findUserByEmail(String email) {
         return authRepository.findByEmail(email);
