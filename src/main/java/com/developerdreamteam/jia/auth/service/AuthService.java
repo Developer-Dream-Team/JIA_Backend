@@ -141,6 +141,7 @@ public class AuthService implements UserDetailsService {
         else {
             throw new UserNotFoundException("user not found or already activated");
         }
+    }
 
     public Optional<User> findUserByEmail(String email) {
         return authRepository.findByEmail(email);
